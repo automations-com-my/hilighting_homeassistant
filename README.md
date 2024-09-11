@@ -1,73 +1,78 @@
-# HiLighting LEDs
+# HiLighting LEDs Integration for Home Assistant
 
-It's yet another cheapo LED strip from AliExpress!  Every strip I buy seems to get cheaper and cheaper.  I find it strange that every manufacturer seems to implement their own controller and so each set of lights has a different protocol.  But here we are.
-This time I paid £2.52 including tax and delivery for a 5M strip with an IR remote control.  The remote didn't include a battery.  The app is called `HiLighting`.  It forces you to enable precise location on Android before it will even detect your lights and allow you to control them!  There is some interesting looking functionality which allows you to choose your own colour scheme for the effects.  I don't think I will spent too much time with that since it's not supported in Home Assistant, but we'll see.
+This repository provides integration support for various BLE RGB LED strips, including those commonly sourced from platforms like AliExpress and Lazada. Different manufacturers tend to use unique controllers, each with its own communication protocol. This project focuses on integrating these controllers seamlessly with Home Assistant, providing users with a unified interface for their LED strips.
 
-Something to be aware of is that the picture on the AliExpress page for the product doesn't necessarily represent the app or the controller that the lights will use.
+## Supported Devices
 
-AliExpress link:  https://s.click.aliexpress.com/e/_DD74ZBn
+We have recently added support for an additional BLE RGB LED strip found on Lazada. Initially, this strip wasn't recognized by the existing integration due to a different advertised Bluetooth name. After thorough investigation, we confirmed that the controller uses the same application and command set as previously supported devices, and we extended the integration to include this new variant.
 
-![image](https://github.com/8none1/hilighting_homeassistant/assets/6552931/317cab8a-c576-4db9-8aa8-8744dd775748)
+### Lazada version:
+- https://www.lazada.com.my/products/i3606344623-s21149872014.html
+- Product screenshots shows `L7261` and `L7161`.
+- Advertised Bluetooth name: `L7183`
+- MAC address prefix: `23:11:11`
 
-![image](https://github.com/8none1/hilighting_homeassistant/assets/6552931/5bb03ae0-b6ba-47ea-b27e-1a9519bb7eb1)
+### AliExpress version:
+- https://s.click.aliexpress.com/e/_DD74ZBn
+- Advertised Bluetooth name: `L7161`
+- MAC address prefix: `23:01:02`
 
-My lights report their name as: `L7161` and have a MAC address of `23:01:02:aa:10:84`.
+Both versions are controlled using the `HiLighting` smartphone application, which may require enabling precise location services on certain Android versions to detect and control the LED strips.
 
+## Features
 
-## Current State
+The integration currently provides the following features for the supported LED strips:
 
-Planned implementation complete.
+- Turn On / Off
+- Set RGB Colour
+- Adjust Brightness
+- Control Limited Effects with a Fixed Speed
 
-Working:
-
-- On / Off
-- Set RGB colour
-- Brightness
-- Limited effects with a fixed speed
+The integration works by assuming the current state of the lights based on the last command sent. As a result, if the lights are altered externally (e.g., via the IR remote), the Home Assistant integration will not detect these changes, leading to a potential mismatch between the actual and assumed states.
 
 ## Installation in Home Assistant
 
-## Installation
-
 ### Requirements
 
-You need to have the bluetooth component configured and working in Home Assistant in order to use this integration.
+Ensure that the Bluetooth component and [HACS](https://hacs.xyz/) (Home Assistant Community Store) are properly configured and operational within Home Assistant.
 
-### HACS
+### Installation via HACS
 
-Add this repo to HACS as a custom repo.  Click through:
+Add this repository to HACS as a custom repository:
 
-- HACS -> Integrations -> Top right menu -> Custom Repositories
-- Paste the Github URL to this repo in to the Repository box
-- Choose category `Integration`
+- Navigate to HACS -> Integrations -> Top right menu -> Custom Repositories
+- Paste the GitHub URL of this repo into the Repository field
+- Select `Integration` as the category
 - Click Add
+- Find the HiLighting integration and click Download to install
 - Restart Home Assistant
-- HiLighting LED devices should start to appear in your Integrations page
+- Your HiLighting LED devices should now appear in your Integrations page
 
-## Sniffing
+## Sniffing the BLE Communication
 
-As with the [ELK-BLEDOB](https://github.com/8none1/elk-bledob) project I will be using an nRF52840 BLE Sniffer rather than trying to get snoop logs off Android.
-So let's breakout Wireshark and go fishing...
+Similar to [ELK-BLEDOB](https://github.com/8none1/elk-bledob) project, an nRF52840 BLE Sniffer was used to capture the communication between the controller and the application, helping to understand the protocol.
 
-Tips if you're using Wireshark and a nRF52840 with the Nordic toolkit:
+### Wireshark Tips
 
-- Filter `btle.length != 0` will hide empty PDU packets
-- Filter `btatt.handle == 0x0014` will show writes to the serial port
+- Use `btle.length != 0` to filter out empty PDU packets
+- Use `btatt.handle == 0x0014` to filter for writes to the serial port
 
-## What the....
+## Command Reference
 
-It looks like this set of lights offers a serial port over Bluetooth LE and then you send commands to it that way.
-Had a chat on the Home Assistant Discord and the feeling is that if it's GATT then it should just work, so I'm going to try and implement a simple on/off integration before digging in to all the complex stuff.
-... and ...  it does indeed just work.
+The controller operates via a Bluetooth LE serial port with the identifier `6e400002-b5a3-f393-e0a9-e50e24dcca9e`. This port is write-only, meaning it does not provide feedback or status updates after receiving commands. Therefore, communication with the controller is one-way.
 
-## Power on & off
+Due to the write-only nature of the UART connection, any changes made directly through the controller (e.g., using an infrared remote control) will not be reflected in Home Assistant.
 
-If you have a BLE UART connection you just write these bytes to the serial port.  Using an app like [LightBlue](https://punchthrough.com/lightblue/) you can connect to the controller, connect to `6e400002-b5a3-f393-e0a9-e50e24dcca9e` and write these hex bytes.
+To test or manually execute commands, you can use an app like [LightBlue](https://punchthrough.com/lightblue/) to connect to the controller. Once connected, you can write the required command hex bytes directly to the serial port. This is particularly useful for debugging or manually controlling the lights outside of the Home Assistant environment.
 
-- `55 01 02 00` Off
-- `55 01 02 01` On
+### Power on & off
 
-## RGB
+Using a BLE UART connection, write the following bytes to the serial port:
+
+- `55 01 02 00` for Off
+- `55 01 02 01` for On
+
+### Set RGB Color
 
 ```
 |------|------------------------ header
@@ -78,9 +83,7 @@ If you have a BLE UART connection you just write these bytes to the serial port.
 55 07 01 00 ff 00
 55 07 01 00 00 ff
 ```
-## Brightness
-
-Brightness is odd.
+### Adjust Brightness
 
 ```
 |------|------------------------ header
@@ -93,11 +96,9 @@ Brightness is odd.
 Minimum brightness is 0x6c 0x02 (27650)
 Maximum brightness is 0xff 0x0f (65295)
 
-It seems that the two brightness bytes do not represent a single value.  Byte 4, the last byte, is a scale which stops at 0x0F.  Byte 3 is the smaller increments which seems to be an 8 bit number.  I don't think it's really necessary to have that level of granularity on these type of LEDs, so I've only implemented the 15 levels of brightness from byte 4.  This seems fine.
+### Control Effects
 
-## Effects
-
-The standard effects numbered from 0 to 9.  You don't seem to be able to specify a brightness for them.
+The effects are numbered from 0 to 9, and the brightness cannot be adjusted for these effects.
 
 ```
 |---|--------------------------- header
@@ -122,10 +123,7 @@ The standard effects numbered from 0 to 9.  You don't seem to be able to specify
 55 04 04 ff
 ```
 
-#### Custom Effects
-
-We could build a set of custom effects and hard code them as part of the integration.  But I'm not planning on doing that any time soon.  The format seems easy enough to understand.
-
+### Custom Effects
 
 ```
 
@@ -144,6 +142,16 @@ We could build a set of custom effects and hard code them as part of the integra
 
 ```
 
+## Contributing
+
+This project is continuously evolving to support new devices. If you encounter a similar LED strip that isn't recognized by this integration, feel free to contribute by following the steps outlined in this document or [reach out to us](https://automations.com.my/#contact) for Custom Integration Development Services.
+
+## Possible Enhancements
+
+- Custom Effect with Timing could be added
+- Controller Firmware version and other information could be displayed on the detected devices
+- Custom Firmware for the controller could be developed to provide bidirectional communications allowing status reads and updates in Home Assistant
+
 ## Other projects that might be of interest
 
 - [iDotMatrix](https://github.com/8none1/idotmatrix)
@@ -151,5 +159,4 @@ We could build a set of custom effects and hard code them as part of the integra
 - [iDealLED](https://github.com/8none1/idealLED)
 - [BJ_LED](https://github.com/8none1/bj_led)
 - [ELK BLEDOB](https://github.com/8none1/elk-bledob)
-- [HiLighting LED](https://github.com/8none1/hilighting_homeassistant)
 - [BLELED LED Lamp](https://github.com/8none1/ledble-ledlamp)
