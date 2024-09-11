@@ -2,14 +2,15 @@
   "domain": "hilighting_ble",
   "name": "HiLighting LED",
   "bluetooth": [
+      { "local_name": "L7183" },
       { "local_name": "L7161" }
     ],
-  "codeowners": ["@8none1"],
+  "codeowners": ["@automations-com-my"],
   "config_flow": true,
   "dependencies": ["bluetooth"],
-  "documentation": "https://github.com/8none1/hilighting_homeassistant",
+  "documentation": "https://github.com/automations-com-my/hilighting_homeassistant",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/8none1/hilighting_homeassistant/issues",
+  "issue_tracker": "https://github.com/automations-com-my/hilighting_homeassistant/issues",
   "requirements": ["bleak-retry-connector>=1.17.1","bleak>=0.17.0"],
   "version": "0.0.1",
   "integration_type": "device"

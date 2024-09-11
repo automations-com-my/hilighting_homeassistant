@@ -49,7 +49,7 @@ EFFECT_MAP = {
 EFFECT_LIST = sorted(EFFECT_MAP)
 EFFECT_ID_NAME = {v: k for k, v in EFFECT_MAP.items()}
 
-NAME_ARRAY = ["L7161"]
+NAME_ARRAY = ["L7183","L7161"]
 WRITE_CHARACTERISTIC_UUIDS = ["6e400002-b5a3-f393-e0a9-e50e24dcca9e"]
 TURN_ON_CMD  = [bytearray.fromhex("55 01 02 01")]
 TURN_OFF_CMD = [bytearray.fromhex("55 01 02 00")]
